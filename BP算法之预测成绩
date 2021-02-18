@@ -1,0 +1,76 @@
+def load_data(): #将处理的数据分装成函数
+    #数据导入
+    import numpy as np
+    import json
+    datafile = 'D:/py学习与代码/算法组 NLP任务三/成绩数据.txt'
+    data = np.fromfile(datafile,sep=' ')  
+    #数据形状变换
+    feature_names = ['跳高','行进跑','跳远','助跑跳高','杠铃','半蹲系数','100','抓举']
+    feature_num = len(feature_names)
+    data = data.reshape(14,8)
+    #归一化处理 
+    maxi,mini,avgs = data.max(axis=0),data.min(axis=0),data.sum(axis=0)/data.shape[0]
+    for i in range(feature_num):
+        #print(maxi[i], mini[i], avgs[i])
+        data[:,i] = (data[:,i]-avgs[i])/(maxi[i]-mini[i])
+    return data
+
+class Network(object):
+    def __init__(self,num_of_weights):
+        #s随机产生w的初始值
+        #为了保持程序每次运行结果的一致性，设置固定的随机数种子
+        np.random.seed(0)
+        self.w = np.random.randn(num_of_weights,1)
+        self.b = 0
+        
+    def forward(self,x):
+        z = np.dot(x,self.w) + self.b
+        return z
+    def loss(self, z, y):
+        error = z-y
+        cost = error * error
+        cost = np.mean(cost)  #对向量取均值操作
+        return cost
+    def gradient(self,x,y):
+        z = self.forward(x)
+        gradient_w = (z-y)*x
+        gradient_w = np.mean(gradient_w,axis=0)
+        gradient_w = gradient_w[:,np.newaxis]
+        gradient_b = (z-y)
+        gradient_b = np.mean(gradient_b)
+        return gradient_w,gradient_b
+    def update(self,gradient_w,gradient_b,eta =0.01): #定义步长eta     
+        # 梯度更新
+        # 沿着梯度的反方向移动到下一个点P1 
+        self.w = self.w - eta * gradient_w
+        self.b = self.b - eta * gradient_b
+    def train(self, data, num_epoches, batch_size=1, eta=0.01):
+        n = len(data)
+        losses = []
+        for epoch_id in range(num_epoches):
+            # 在每轮迭代开始之前，将训练数据的顺序随机打乱
+            # 然后再按每次取batch_size条数据的方式取出
+            np.random.shuffle(data)
+            # 将训练数据进行拆分，每个mini_batch包含batch_size条的数据
+            mini_batches = [data[k:k+batch_size] for k in range(0, n, batch_size)]
+            for iter_id, mini_batch in enumerate(mini_batches):
+                x = mini_batch[:, :-1]
+                y = mini_batch[:, -1:]
+                a = self.forward(x)
+                loss = self.loss(a, y)
+                gradient_w, gradient_b = self.gradient(x, y)
+                self.update(gradient_w, gradient_b, eta)
+                losses.append(loss)
+        return gradient_w, gradient_b
+    
+import numpy as np
+# 获取数据
+data1 = load_data()
+# 创建网络
+net = Network(7)
+#启动训练
+w,b = net.train(data1,num_epoches =65)
+a=np.array([3.0,9.3,2.05,100,2.8,11.2,50])
+x=a[np.newaxis,:]
+score = np.dot(x,w) +b
+print(score)
